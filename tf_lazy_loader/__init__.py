@@ -13,6 +13,8 @@ class _LazyLoader(types.ModuleType):
     This class is not meant to be accessed publicly, see the 'dynamic_import' function
     below for how to use the lazy loading feature.
 
+    If the
+
     Taken from tensorflow's LazyLoader:
 
     https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/util/lazy_loader.py
@@ -50,6 +52,9 @@ class _LazyLoader(types.ModuleType):
         #   that fail).
         self.__dict__.update(module.__dict__)
 
+        # Mark that this module was lazily loaded so we can check for it in other
+        # projects/contexts.
+        module._ll_lazily_loaded = True
         return module
 
     def __getattr__(self, name):
@@ -94,7 +99,13 @@ class _LazyLoader(types.ModuleType):
         return dir(module)
 
     def __reduce__(self):
-        return importlib.import_module, (self.__name__,)
+        imported_module = importlib.import_module, (self.__name__,)
+
+        # Mark that this module was lazily loaded so we can check for it in other
+        # projects/contexts.
+        imported_module._ll_lazily_loaded = True
+
+        return imported_module
 
 
 def dynamic_import(
